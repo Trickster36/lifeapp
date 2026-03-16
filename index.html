@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1e1e1c">
+<title>MyLife</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #1e1e1c;
+  --surface:  #272724;
+  --surface2: #2f2f2c;
+  --border:   #3a3a36;
+  --muted:    #6b6b65;
+  --text:     #d4d2cb;
+  --dim:      #8a8880;
+  --accent:   #b5a98a;
+  --green:    #7a9e8e;
+  --purple:   #9e8aa0;
+  --red:      #9e7a7a;
+  --yellow:   #b5993a;
+  --nav-h:    64px;
+  --radius:   12px;
+  --lg:       18px;
+  --sans:     'DM Sans', sans-serif;
+  --serif:    'Cormorant Garamond', serif;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent }
+html,body { height:100%; background:var(--bg); color:var(--text); font-family:var(--sans); font-size:16px; line-height:1.6; overflow:hidden }
+
+/* ── PAGES ── */
+.page { position:fixed; inset:0; bottom:var(--nav-h); overflow-y:auto; overflow-x:hidden; background:var(--bg); opacity:0; pointer-events:none; transform:translateY(8px); transition:opacity .2s ease,transform .2s ease; -webkit-overflow-scrolling:touch }
+.page.active { opacity:1; pointer-events:all; transform:translateY(0) }
+.page-inner { padding:20px 18px 40px; max-width:600px; margin:0 auto }
+
+/* ── NAV ── */
+nav { position:fixed; bottom:0; left:0; right:0; height:var(--nav-h); background:var(--surface); display:flex; z-index:100; border-top:1px solid var(--border) }
+.nav-btn { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; background:none; border:none; color:var(--muted); cursor:pointer; transition:color .15s; padding:8px 0 }
+.nav-btn svg { width:22px; height:22px; flex-shrink:0 }
+.nav-label { font-size:11px; font-weight:400; letter-spacing:.5px; text-transform:uppercase }
+.nav-btn.active { color:var(--accent) }
+.nav-btn.active[data-page="todo"] { color:var(--green) }
+.nav-btn.active[data-page="skills"] { color:var(--purple) }
+
+/* ── PAGE HEADER ── */
+.pg-head { padding:22px 0 16px; display:flex; justify-content:space-between; align-items:center }
+.pg-title { font-family:var(--serif); font-size:32px; font-weight:300; color:var(--text) }
+.pg-date { font-size:11px; color:var(--muted); letter-spacing:.07em; text-transform:uppercase; text-align:right }
+
+/* ── BTN ADD ── */
+.btn-add { width:34px; height:34px; border-radius:50%; background:var(--surface2); border:1px solid var(--border); color:var(--dim); font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s; line-height:1; flex-shrink:0 }
+.btn-add:active { border-color:var(--accent); color:var(--accent); transform:scale(.92) }
+
+/* ── CHIPS ── */
+.chips { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap }
+.chip { padding:5px 12px; border-radius:20px; background:var(--surface); border:1px solid var(--border); font-size:11px; color:var(--muted); letter-spacing:.05em; cursor:pointer; transition:all .15s; font-family:var(--sans) }
+.chip.active { background:var(--surface2); border-color:var(--accent); color:var(--accent) }
+.chip.active.g { border-color:var(--green); color:var(--green) }
+.chip.active.p { border-color:var(--purple); color:var(--purple) }
+
+/* ── CARDS ── */
+.card { background:var(--surface); border:1px solid var(--border); border-radius:var(--lg); padding:16px 18px; margin-bottom:12px; display:flex; align-items:flex-start; gap:14px; transition:border-color .2s }
+.card:active { border-color:#4a4a45 }
+.card-body { flex:1; min-width:0 }
+.card-title { font-size:16px; font-weight:400; color:var(--text); margin-bottom:4px }
+.card-meta { font-size:11px; color:var(--muted); display:flex; flex-wrap:wrap; gap:6px; margin-top:4px }
+.tag { background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:2px 8px; font-size:10px; color:var(--dim); letter-spacing:.04em }
+.tag.morning { border-color:#b5a98a44; color:var(--accent) }
+.tag.evening { border-color:#9e8aa044; color:var(--purple) }
+
+/* ── ROUTINE STATUS ── */
+.card-accent { width:3px; border-radius:3px; align-self:stretch; flex-shrink:0; background:var(--border); transition:background .2s }
+.card-accent.done    { background:var(--green) }
+.card-accent.partial { background:var(--yellow) }
+.card-accent.skipped { background:var(--red) }
+.status-btns { display:flex; gap:7px; margin-top:10px }
+.sb { padding:7px 14px; border-radius:20px; font-size:12px; background:var(--surface2); border:1px solid var(--border); color:var(--dim); cursor:pointer; transition:all .15s; letter-spacing:.04em; font-family:var(--sans) }
+.sb.done-a    { background:#7a9e8e22; border-color:var(--green);  color:var(--green) }
+.sb.partial-a { background:#b5993a22; border-color:var(--yellow); color:var(--yellow) }
+.sb.skipped-a { background:#9e7a7a22; border-color:var(--red);    color:var(--red) }
+
+/* ── TODO ── */
+.check-wrap { flex-shrink:0; margin-top:1px }
+.check-wrap input { display:none }
+.check-wrap label { width:20px; height:20px; border-radius:6px; border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .2s; color:transparent; font-size:11px }
+.check-wrap input:checked+label { background:var(--green); border-color:var(--green); color:#fff }
+.card.done .card-title { text-decoration:line-through; color:var(--muted) }
+.todo-date { font-size:11px; color:var(--dim); margin-top:2px }
+.todo-cat { display:inline-block; padding:2px 8px; border-radius:20px; font-size:10px; background:var(--surface2); border:1px solid var(--border); color:var(--dim) }
+
+/* ── SKILLS ── */
+.skill-icon { width:38px; height:38px; border-radius:10px; background:var(--surface2); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0 }
+.skill-status { display:inline-block; padding:2px 8px; border-radius:20px; font-size:10px; letter-spacing:.04em; margin-bottom:4px }
+.skill-status.active { background:#7a9e8e22; border:1px solid var(--green);  color:var(--green) }
+.skill-status.paused { background:#b5993a22; border:1px solid var(--yellow); color:var(--yellow) }
+.skill-status.done   { background:#3a3a3622; border:1px solid var(--border); color:var(--dim) }
+.skill-focus     { font-size:12px; color:var(--purple); font-style:italic; margin-bottom:3px }
+.skill-milestone { font-size:11px; color:var(--muted) }
+.skill-milestone span { color:var(--dim) }
+
+/* ── HISTORY ── */
+.month-nav { display:flex; align-items:center; gap:12px; margin-bottom:16px }
+.month-nav button { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:6px 14px; color:var(--dim); cursor:pointer; font-size:14px; font-family:var(--sans); transition:border-color .2s }
+.month-nav button:active { border-color:var(--accent) }
+.month-nav span { font-size:14px; color:var(--text); flex:1; text-align:center }
+.history-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--lg); padding:16px; margin-bottom:10px }
+.history-name { font-size:14px; font-weight:400; margin-bottom:10px }
+.history-bars { display:flex; gap:8px }
+.hbar { flex:1; text-align:center }
+.hbar-val { font-size:24px; font-weight:400; font-family:var(--serif) }
+.hbar-val.d { color:var(--green) }
+.hbar-val.p { color:var(--yellow) }
+.hbar-val.s { color:var(--red) }
+.hbar-lbl { font-size:10px; color:var(--muted); letter-spacing:.05em; margin-top:2px }
+
+/* ── MILESTONE PROMPT ── */
+.milestone-prompt { background:var(--surface2); border:1px solid var(--purple); border-radius:var(--radius); padding:14px 16px; margin-bottom:12px }
+.milestone-prompt p { font-size:13px; color:var(--purple); margin-bottom:10px }
+.milestone-prompt input { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:8px 12px; color:var(--text); font-size:13px; font-family:var(--sans); outline:none }
+.milestone-prompt input:focus { border-color:var(--purple) }
+.milestone-prompt-btns { display:flex; gap:8px; margin-top:10px }
+.mpc-save { flex:1; padding:8px; border-radius:8px; background:var(--purple); border:none; color:#fff; font-size:12px; cursor:pointer; font-family:var(--sans) }
+.mpc-skip { flex:1; padding:8px; border-radius:8px; background:none; border:1px solid var(--border); color:var(--dim); font-size:12px; cursor:pointer; font-family:var(--sans) }
+.mpc-cancel { flex:1; padding:8px; border-radius:8px; background:none; border:1px solid var(--red); color:var(--red); font-size:12px; cursor:pointer; font-family:var(--sans) }
+
+/* ── DELETE BTN ── */
+.btn-del { background:none; border:none; color:var(--border); font-size:18px; cursor:pointer; padding:2px 4px; border-radius:6px; transition:color .2s; flex-shrink:0; line-height:1 }
+.btn-del:active { color:var(--red) }
+
+/* ── EMPTY STATE ── */
+.empty { text-align:center; padding:48px 0 16px; color:var(--muted); font-size:13px; line-height:1.9 }
+.empty .ei { font-size:32px; margin-bottom:10px }
+
+/* ── BOTTOM SHEET MODAL ── */
+.modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.65); backdrop-filter:blur(4px); display:none; align-items:flex-end; justify-content:center; z-index:200 }
+.modal-bg.open { display:flex }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:var(--lg) var(--lg) 0 0; padding:24px 20px 44px; width:100%; max-width:500px; animation:su .25s ease; max-height:88vh; overflow-y:auto }
+@keyframes su { from { transform:translateY(30px); opacity:0 } to { transform:translateY(0); opacity:1 } }
+.modal h3 { font-family:var(--serif); font-size:22px; font-weight:400; margin-bottom:18px }
+.field { margin-bottom:13px }
+.field label { display:block; font-size:11px; color:var(--muted); letter-spacing:.07em; text-transform:uppercase; margin-bottom:5px }
+.field input,.field textarea,.field select { width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; color:var(--text); font-family:var(--sans); font-size:15px; font-weight:300; outline:none; transition:border-color .2s; -webkit-appearance:none; appearance:none }
+.field input:focus,.field textarea:focus,.field select:focus { border-color:var(--accent) }
+.field textarea { resize:vertical; min-height:64px }
+.days-picker { display:flex; gap:5px; flex-wrap:wrap }
+.days-picker label { display:flex; align-items:center; background:var(--surface2); border:1px solid var(--border); border-radius:20px; padding:5px 12px; font-size:12px; color:var(--dim); cursor:pointer; transition:all .15s }
+.days-picker input { display:none }
+.days-picker label.checked { border-color:var(--accent); color:var(--accent) }
+.modal-actions { display:flex; gap:8px; margin-top:18px }
+.btn-save { flex:1; padding:14px; background:var(--accent); border:none; border-radius:var(--radius); color:var(--bg); font-family:var(--sans); font-size:15px; font-weight:500; cursor:pointer; transition:opacity .2s }
+.btn-save:active { opacity:.8 }
+.btn-cancel { padding:14px 18px; background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); color:var(--dim); font-family:var(--sans); font-size:15px; cursor:pointer }
+
+/* Cat pills */
+.cat-pills { display:flex; flex-wrap:wrap; gap:6px }
+.cat-pill { padding:5px 13px; border-radius:20px; font-size:12px; background:var(--surface2); border:1px solid var(--border); color:var(--dim); cursor:pointer; transition:all .15s; font-family:var(--sans) }
+.cat-pill.sel { border-color:var(--green); color:var(--green) }
+.cat-pill.new-pill { border-style:dashed; color:var(--muted) }
+
+/* ── SETTINGS / PROFILE ── */
+.profile-wrap { display:flex; align-items:center; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:var(--lg); padding:16px; margin-bottom:16px }
+.profile-avatar { width:44px; height:44px; border-radius:50%; background:var(--surface2); border:1px solid var(--border); object-fit:cover; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:20px }
+.profile-name { font-size:15px; font-weight:400; color:var(--text) }
+.profile-email { font-size:12px; color:var(--muted); margin-top:2px }
+.btn-google { display:flex; align-items:center; gap:10px; width:100%; padding:13px 16px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); color:var(--text); font-family:var(--sans); font-size:14px; cursor:pointer; transition:border-color .2s; margin-bottom:10px }
+.btn-google:active { border-color:var(--accent) }
+.btn-google svg { width:18px; height:18px; flex-shrink:0 }
+.btn-google.signed-in { border-color:var(--green); color:var(--green) }
+.btn-signout { width:100%; padding:12px; background:none; border:1px solid var(--border); border-radius:var(--radius); color:var(--dim); font-family:var(--sans); font-size:14px; cursor:pointer; transition:all .2s; margin-bottom:10px }
+.btn-signout:active { border-color:var(--red); color:var(--red) }
+.sync-status { font-size:12px; color:var(--muted); text-align:center; margin-top:8px }
+.settings-section { margin-bottom:20px }
+.settings-label { font-size:11px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:10px }
+
+/* ── INSTALL BANNER ── */
+#install-banner { position:fixed; bottom:76px; left:50%; transform:translateX(-50%); background:var(--surface2); border:1px solid var(--border); border-radius:var(--lg); padding:11px 18px; display:none; align-items:center; gap:12px; font-size:12px; color:var(--dim); z-index:50; max-width:340px; width:calc(100% - 40px); box-shadow:0 8px 32px rgba(0,0,0,.5) }
+#install-banner.show { display:flex }
+#install-btn { background:var(--accent); border:none; border-radius:8px; padding:7px 14px; color:var(--bg); font-size:12px; font-weight:500; cursor:pointer; white-space:nowrap; font-family:var(--sans) }
+#dismiss-install { background:none; border:none; color:var(--muted); cursor:pointer; font-size:20px; margin-left:auto; line-height:1 }
+</style>
+</head>
+<body>
+
+<!-- ROUTINE PAGE -->
+<div class="page active" id="page-routine">
+  <div class="page-inner">
+    <div class="pg-head">
+      <div>
+        <div class="pg-title">Routine</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="chip" id="history-toggle" onclick="toggleHistory()">📊 History</button>
+        <button class="btn-add" onclick="openModal('routine')">+</button>
+      </div>
+    </div>
+    <div class="chips" id="day-chips"></div>
+    <div id="routine-list"></div>
+    <div id="history-view" style="display:none">
+      <div class="month-nav">
+        <button onclick="changeMonth(-1)">‹</button>
+        <span id="month-label"></span>
+        <button onclick="changeMonth(1)">›</button>
+      </div>
+      <div id="history-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- TODO PAGE -->
+<div class="page" id="page-todo">
+  <div class="page-inner">
+    <div class="pg-head">
+      <div class="pg-title">To Do</div>
+      <button class="btn-add" onclick="openModal('todo')">+</button>
+    </div>
+    <div class="chips" id="todo-cat-chips"></div>
+    <div class="chips" id="todo-status-chips">
+      <button class="chip active g" onclick="setTodoFilter(this,'all')">All</button>
+      <button class="chip" onclick="setTodoFilter(this,'open')">Open</button>
+      <button class="chip" onclick="setTodoFilter(this,'done')">Done</button>
+    </div>
+    <div id="todo-list"></div>
+  </div>
+</div>
+
+<!-- SKILLS PAGE -->
+<div class="page" id="page-skills">
+  <div class="page-inner">
+    <div class="pg-head">
+      <div class="pg-title">Skills</div>
+      <button class="btn-add" onclick="openModal('skills')">+</button>
+    </div>
+    <div id="milestone-prompts"></div>
+    <div id="skills-list"></div>
+  </div>
+</div>
+
+<!-- SETTINGS PAGE -->
+<div class="page" id="page-settings">
+  <div class="page-inner">
+    <div class="pg-head">
+      <div class="pg-title">Account</div>
+      <div class="pg-date" id="date-lbl"></div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label">Profile</div>
+      <div class="profile-wrap">
+        <div class="profile-avatar" id="profile-avatar">👤</div>
+        <div>
+          <div class="profile-name" id="profile-name">Guest</div>
+          <div class="profile-email" id="profile-email">Not signed in</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-label">Sync</div>
+      <button class="btn-google" id="google-btn" onclick="handleGoogleAuth()">
+        <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        <span id="google-btn-text">Sign in with Google</span>
+      </button>
+      <button class="btn-signout" id="signout-btn" style="display:none" onclick="handleSignOut()">Sign out</button>
+      <div class="sync-status" id="sync-status"></div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <button class="nav-btn active" data-page="routine" onclick="goTo('routine')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    <span class="nav-label">Routine</span>
+  </button>
+  <button class="nav-btn" data-page="todo" onclick="goTo('todo')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    <span class="nav-label">To Do</span>
+  </button>
+  <button class="nav-btn" data-page="skills" onclick="goTo('skills')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+    <span class="nav-label">Skills</span>
+  </button>
+  <button class="nav-btn" data-page="settings" onclick="goTo('settings')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    <span class="nav-label">Account</span>
+  </button>
+</nav>
+
+<!-- MODALS -->
+<div class="modal-bg" id="modal-bg" onclick="bgClose(event)">
+
+  <!-- Routine Modal -->
+  <div class="modal" id="modal-routine" style="display:none">
+    <h3>Add Routine</h3>
+    <div class="field"><label>Name</label><input id="r-name" type="text" placeholder="e.g. Morning workout"/></div>
+    <div class="field">
+      <label>Time of day</label>
+      <select id="r-time"><option value="morning">Morning</option><option value="evening">Evening</option><option value="anytime">Anytime</option></select>
+    </div>
+    <div class="field">
+      <label>Repeat</label>
+      <select id="r-repeat" onchange="toggleDayPicker()"><option value="daily">Every day</option><option value="weekdays">Specific weekdays</option></select>
+    </div>
+    <div class="field" id="r-days-field" style="display:none">
+      <label>Which days</label>
+      <div class="days-picker" id="r-days">
+        <label><input type="checkbox" value="Mon"><span>Mon</span></label>
+        <label><input type="checkbox" value="Tue"><span>Tue</span></label>
+        <label><input type="checkbox" value="Wed"><span>Wed</span></label>
+        <label><input type="checkbox" value="Thu"><span>Thu</span></label>
+        <label><input type="checkbox" value="Fri"><span>Fri</span></label>
+        <label><input type="checkbox" value="Sat"><span>Sat</span></label>
+        <label><input type="checkbox" value="Sun"><span>Sun</span></label>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveRoutine()">Save</button>
+    </div>
+  </div>
+
+  <!-- Todo Modal -->
+  <div class="modal" id="modal-todo" style="display:none">
+    <h3>Add Task</h3>
+    <div class="field"><label>Task</label><input id="t-name" type="text" placeholder="What needs to be done?"/></div>
+    <div class="field"><label>Date</label><input id="t-date" type="date"/></div>
+    <div class="field"><label>Time (optional)</label><input id="t-time" type="time"/></div>
+    <div class="field">
+      <label>Category</label>
+      <div class="cat-pills" id="cat-pills"></div>
+    </div>
+    <div class="field" id="new-cat-field" style="display:none">
+      <label>New category name</label>
+      <input id="new-cat-name" type="text" placeholder="e.g. Health"/>
+    </div>
+    <div class="field"><label>Notes (optional)</label><textarea id="t-notes" placeholder="Any details..."></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveTodo()">Save</button>
+    </div>
+  </div>
+
+  <!-- Skills Modal -->
+  <div class="modal" id="modal-skills" style="display:none">
+    <h3>Add Skill</h3>
+    <div class="field"><label>Skill name</label><input id="s-name" type="text" placeholder="e.g. Spanish"/></div>
+    <div class="field"><label>Emoji icon</label><input id="s-icon" type="text" placeholder="🎯" maxlength="4"/></div>
+    <div class="field">
+      <label>Status</label>
+      <select id="s-status"><option value="active">Actively Learning</option><option value="paused">On Pause</option><option value="done">Completed</option></select>
+    </div>
+    <div class="field"><label>Current focus</label><input id="s-focus" type="text" placeholder="What are you working on now?"/></div>
+    <div class="field"><label>Next milestone (optional)</label><input id="s-milestone" type="text" placeholder="What's your next goal?"/></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveSkill()">Save</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Install Banner -->
+<div id="install-banner">
+  <span>Install as app</span>
+  <button id="install-btn">Install</button>
+  <button id="dismiss-install">×</button>
+</div>
+
+<script type="module">
+import { initializeApp }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInAnonymously, signInWithPopup, linkWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getDatabase, ref, set, onValue, remove }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+// ── REPLACE WITH YOUR FIREBASE CONFIG ──
+const firebaseConfig = {
+  apiKey:            "YOUR_API_KEY",
+  authDomain:        "YOUR_AUTH_DOMAIN",
+  databaseURL:       "YOUR_DATABASE_URL",
+  projectId:         "YOUR_PROJECT_ID",
+  storageBucket:     "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId:             "YOUR_APP_ID"
+};
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+// ── STATE ──
+let uid        = null;
+let routines   = [];
+let todos      = [];
+let skills     = [];
+let categories = [];
+let routineLog = {};
+const DAYS   = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+let selectedDay  = getTodayKey();
+let showAllDays  = false;
+let todoFilter   = 'all';
+let todoCatFilter= 'all';
+let historyVisible = false;
+let historyDate  = new Date();
+let selectedCat  = null;
+let pendingMilestone = null;
+let deferredPrompt = null;
+
+// ── HELPERS ──
+function getTodayKey() {
+  const d = new Date();
+  return DAYS[d.getDay() === 0 ? 6 : d.getDay() - 1];
+}
+function todayStr() { return new Date().toISOString().split('T')[0]; }
+function uid6()     { return Math.random().toString(36).slice(2,8); }
+
+// ── DB SAVE HELPERS ──
+function saveRoutinesDB()   { if (uid) set(ref(db, uid+'/routines'),   routines.length   ? Object.fromEntries(routines.map(r=>[r.id,r]))     : null) }
+function saveTodosDB()      { if (uid) set(ref(db, uid+'/todos'),      todos.length      ? Object.fromEntries(todos.map(t=>[t.id,t]))         : null) }
+function saveSkillsDB()     { if (uid) set(ref(db, uid+'/skills'),     skills.length     ? Object.fromEntries(skills.map(s=>[s.id,s]))        : null) }
+function saveCategoriesDB() { if (uid) set(ref(db, uid+'/categories'), categories.length ? Object.fromEntries(categories.map(c=>[c.id,c]))    : null) }
+function saveLogDB()        { if (uid) set(ref(db, uid+'/routineLog'), Object.keys(routineLog).length ? routineLog : null) }
+
+// ── SYNC STATUS ──
+function setSyncStatus(msg, color) {
+  const el = document.getElementById('sync-status');
+  if (el) { el.textContent = msg; el.style.color = color || 'var(--muted)'; }
+}
+
+// ── NAVIGATION ──
+function goTo(p) {
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.querySelector(`.nav-btn[data-page="${p}"]`).classList.add('active');
+}
+
+// ── DATE LABEL ──
+document.getElementById('date-lbl').textContent =
+  new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}).toUpperCase();
+
+// ── RENDER ALL ──
+function renderAll() {
+  renderDayChips();
+  renderRoutines();
+  renderTodos();
+  renderSkills();
+  renderCatChips();
+  renderMilestonePrompts();
+}
+
+// ══════════════════════════════════════════
+// ROUTINE
+// ══════════════════════════════════════════
+function renderDayChips() {
+  const wrap = document.getElementById('day-chips');
+  wrap.innerHTML = '';
+  const chips = [
+    { label:'Today', active: !showAllDays && selectedDay === getTodayKey(), fn: ()=>{ showAllDays=false; selectedDay=getTodayKey(); renderDayChips(); renderRoutines(); } },
+    { label:'All',   active: showAllDays, fn: ()=>{ showAllDays=true; renderDayChips(); renderRoutines(); } },
+    ...DAYS.map(d => ({ label:d, active: !showAllDays && selectedDay===d, fn: ()=>{ showAllDays=false; selectedDay=d; renderDayChips(); renderRoutines(); } }))
+  ];
+  chips.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (c.active ? ' active' : '');
+    btn.textContent = c.label;
+    btn.onclick = c.fn;
+    wrap.appendChild(btn);
+  });
+}
+
+function routineForDay(r, day) {
+  return r.repeat === 'daily' || (r.days && r.days.includes(day));
+}
+
+function renderRoutines() {
+  const list = document.getElementById('routine-list');
+  const hv   = document.getElementById('history-view');
+  if (historyVisible) { list.style.display='none'; hv.style.display='block'; renderHistory(); return; }
+  list.style.display=''; hv.style.display='none';
+
+  const filtered = showAllDays ? routines : routines.filter(r => routineForDay(r, selectedDay));
+  if (!filtered.length) {
+    list.innerHTML = `<div class="empty"><div class="ei">☀️</div>No routines for this day.<br>Tap + to add one.</div>`;
+    return;
+  }
+  const today = todayStr();
+  list.innerHTML = filtered.map(r => {
+    const logKey = r.id+'_'+today;
+    const status = routineLog[logKey]?.status || null;
+    return `<div class="card">
+      <div class="card-accent ${status||''}"></div>
+      <div class="card-body">
+        <div class="card-title">${r.name}</div>
+        <div class="card-meta">
+          <span class="tag ${r.time}">${r.time}</span>
+          <span class="tag">${r.repeat==='daily'?'Every day':(r.days?.join(', ')||'—')}</span>
+        </div>
+        <div class="status-btns">
+          <button class="sb ${status==='done'?'done-a':''}"    onclick="setRoutineStatus('${r.id}','done')">✓ Done</button>
+          <button class="sb ${status==='partial'?'partial-a':''}" onclick="setRoutineStatus('${r.id}','partial')">~ Partial</button>
+          <button class="sb ${status==='skipped'?'skipped-a':''}" onclick="setRoutineStatus('${r.id}','skipped')">✕ Skipped</button>
+        </div>
+      </div>
+      <button class="btn-del" onclick="deleteRoutine('${r.id}')">×</button>
+    </div>`;
+  }).join('');
+}
+
+function setRoutineStatus(rid, status) {
+  const today  = todayStr();
+  const logKey = rid+'_'+today;
+  routineLog[logKey] = { routineId:rid, date:today, status };
+  saveLogDB();
+  renderRoutines();
+}
+
+function deleteRoutine(id) {
+  routines = routines.filter(r => r.id !== id);
+  saveRoutinesDB();
+  renderRoutines(); renderDayChips();
+}
+
+// Auto-skip at 23:55
+function scheduleAutoSkip() {
+  const now    = new Date();
+  const target = new Date(); target.setHours(23,55,0,0);
+  const ms     = target - now;
+  if (ms > 0) setTimeout(doAutoSkip, ms);
+  else doAutoSkip();
+}
+function doAutoSkip() {
+  const today = todayStr();
+  let changed = false;
+  routines.forEach(r => {
+    const logKey = r.id+'_'+today;
+    if (!routineLog[logKey]) { routineLog[logKey] = { routineId:r.id, date:today, status:'skipped' }; changed=true; }
+  });
+  if (changed) saveLogDB();
+  // Re-schedule for next day
+  setTimeout(scheduleAutoSkip, 10*60*1000);
+}
+
+// History
+function toggleHistory() {
+  historyVisible = !historyVisible;
+  document.getElementById('history-toggle').style.borderColor = historyVisible ? 'var(--accent)' : '';
+  historyDate = new Date();
+  renderRoutines();
+}
+function changeMonth(dir) { historyDate.setMonth(historyDate.getMonth()+dir); renderHistory(); }
+function renderHistory() {
+  const y=historyDate.getFullYear(), m=historyDate.getMonth();
+  document.getElementById('month-label').textContent = MONTHS[m]+' '+y;
+  const days = new Date(y,m+1,0).getDate();
+  const grid = document.getElementById('history-grid');
+  if (!routines.length) { grid.innerHTML=`<div class="empty"><div class="ei">📊</div>No routines yet.</div>`; return; }
+  grid.innerHTML = routines.map(r => {
+    let done=0,partial=0,skipped=0;
+    for (let d=1;d<=days;d++) {
+      const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+      const s  = routineLog[r.id+'_'+ds]?.status;
+      if (s==='done') done++;
+      else if (s==='partial') partial++;
+      else if (s==='skipped') skipped++;
+    }
+    return `<div class="history-card">
+      <div class="history-name">${r.name}</div>
+      <div class="history-bars">
+        <div class="hbar"><div class="hbar-val d">${done}</div><div class="hbar-lbl">Done</div></div>
+        <div class="hbar"><div class="hbar-val p">${partial}</div><div class="hbar-lbl">Partial</div></div>
+        <div class="hbar"><div class="hbar-val s">${skipped}</div><div class="hbar-lbl">Skipped</div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// TODO
+// ══════════════════════════════════════════
+function renderCatChips() {
+  const wrap = document.getElementById('todo-cat-chips');
+  wrap.innerHTML = '';
+  const all = document.createElement('button');
+  all.className = 'chip' + (todoCatFilter==='all' ? ' active g' : '');
+  all.textContent = 'All';
+  all.onclick = () => { todoCatFilter='all'; renderCatChips(); renderTodos(); };
+  wrap.appendChild(all);
+  categories.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'chip' + (todoCatFilter===c.id ? ' active g' : '');
+    btn.textContent = c.name;
+    btn.onclick = () => { todoCatFilter=c.id; renderCatChips(); renderTodos(); };
+    wrap.appendChild(btn);
+  });
+}
+
+function setTodoFilter(el, f) {
+  document.querySelectorAll('#todo-status-chips .chip').forEach(x=>x.classList.remove('active'));
+  el.classList.add('active');
+  todoFilter = f;
+  renderTodos();
+}
+
+function renderTodos() {
+  const list = document.getElementById('todo-list');
+  let filtered = [...todos];
+  if (todoFilter==='open') filtered = filtered.filter(t=>!t.done);
+  if (todoFilter==='done') filtered = filtered.filter(t=>t.done);
+  if (todoCatFilter!=='all') filtered = filtered.filter(t=>t.catId===todoCatFilter);
+  filtered.sort((a,b)=>(a.date||'9999')<(b.date||'9999')?-1:1);
+
+  if (!filtered.length) {
+    list.innerHTML=`<div class="empty"><div class="ei">✅</div>Nothing here yet.<br>Tap + to add a task.</div>`;
+    return;
+  }
+  list.innerHTML = filtered.map(t => {
+    const cat = categories.find(c=>c.id===t.catId);
+    const dateStr = t.date ? fmtDate(t.date)+(t.time?' · '+t.time:'') : '';
+    return `<div class="card ${t.done?'done':''}">
+      <div class="check-wrap">
+        <input type="checkbox" id="chk-${t.id}" ${t.done?'checked':''} onchange="toggleTodo('${t.id}')"/>
+        <label for="chk-${t.id}">✓</label>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${t.name}</div>
+        ${dateStr?`<div class="todo-date">📅 ${dateStr}</div>`:''}
+        ${cat?`<div style="margin-top:4px"><span class="todo-cat">${cat.name}</span></div>`:''}
+        ${t.notes?`<div class="card-meta" style="margin-top:4px">${t.notes}</div>`:''}
+      </div>
+      <button class="btn-del" onclick="deleteTodo('${t.id}')">×</button>
+    </div>`;
+  }).join('');
+}
+
+function fmtDate(str) {
+  if (!str) return '';
+  return new Date(str+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+
+function toggleTodo(id) {
+  const t = todos.find(x=>x.id===id);
+  if (t) { t.done=!t.done; saveTodosDB(); renderTodos(); }
+}
+function deleteTodo(id) {
+  todos = todos.filter(t=>t.id!==id);
+  saveTodosDB(); renderTodos();
+}
+
+// ══════════════════════════════════════════
+// SKILLS
+// ══════════════════════════════════════════
+function renderMilestonePrompts() {
+  const wrap = document.getElementById('milestone-prompts');
+  if (!pendingMilestone) { wrap.innerHTML=''; return; }
+  wrap.innerHTML = `<div class="milestone-prompt">
+    <p>🎉 Focus complete! What's next for <strong>${pendingMilestone.name}</strong>?</p>
+    <input id="new-milestone-input" type="text" placeholder="Next milestone (leave blank if none)"/>
+    <div class="milestone-prompt-btns">
+      <button class="mpc-save" onclick="saveMilestone('${pendingMilestone.id}')">Save</button>
+      <button class="mpc-skip" onclick="skipMilestone('${pendingMilestone.id}')">No next milestone</button>
+      <button class="mpc-skip" onclick="cancelMilestone()">Cancel</button>
+    </div>
+  </div>`;
+}
+
+function saveMilestone(id) {
+  const val   = document.getElementById('new-milestone-input').value.trim();
+  const skill = skills.find(s=>s.id===id);
+  if (skill) { skill.milestone=val; saveSkillsDB(); }
+  pendingMilestone=null; renderMilestonePrompts(); renderSkills();
+}
+function skipMilestone(id) {
+  const skill = skills.find(s=>s.id===id);
+  if (skill) { skill.milestone=''; saveSkillsDB(); }
+  pendingMilestone=null; renderMilestonePrompts(); renderSkills();
+}
+
+function renderSkills() {
+  const list = document.getElementById('skills-list');
+  if (!skills.length) {
+    list.innerHTML=`<div class="empty"><div class="ei">🌱</div>No skills tracked.<br>Tap + to add one.</div>`;
+    return;
+  }
+  const labels = {active:'Actively Learning',paused:'On Pause',done:'Completed'};
+  list.innerHTML = skills.map(s => `
+    <div class="card">
+      <div class="skill-icon">${s.icon||'📚'}</div>
+      <div class="card-body">
+        <div><span class="skill-status ${s.status}">${labels[s.status]||s.status}</span></div>
+        <div class="card-title" style="margin-top:4px">${s.name}</div>
+        ${s.focus?`<div class="skill-focus">${s.focus}</div>`:''}
+        ${s.milestone?`<div class="skill-milestone">Next: <span>${s.milestone}</span></div>`:''}
+        ${s.status==='active'?`<div style="margin-top:8px"><button class="sb done-a" style="font-size:10px" onclick="markFocusDone('${s.id}')">✓ Focus complete</button></div>`:''}
+      </div>
+      <button class="btn-del" onclick="deleteSkill('${s.id}')">×</button>
+    </div>`).join('');
+}
+
+function markFocusDone(id) {
+  const skill = skills.find(s=>s.id===id);
+  if (!skill) return;
+  const prevFocus = skill.focus;
+  skill.focus    = skill.milestone || '';
+  skill.milestone= '';
+  saveSkillsDB();
+  pendingMilestone = { ...skill, _prevFocus: prevFocus };
+  renderMilestonePrompts(); renderSkills();
+}
+function cancelMilestone() {
+  // Undo the focus promotion — revert skill to previous state
+  const skill = skills.find(s=>s.id===pendingMilestone.id);
+  if (skill) {
+    skill.milestone = skill.focus;
+    skill.focus = pendingMilestone._prevFocus || '';
+    saveSkillsDB();
+  }
+  pendingMilestone=null; renderMilestonePrompts(); renderSkills();
+}
+
+function deleteSkill(id) {
+  skills = skills.filter(s=>s.id!==id);
+  saveSkillsDB();
+  if (pendingMilestone?.id===id) { pendingMilestone=null; renderMilestonePrompts(); }
+  renderSkills();
+}
+
+// ══════════════════════════════════════════
+// MODALS
+// ══════════════════════════════════════════
+function openModal(type) {
+  document.getElementById('modal-bg').classList.add('open');
+  ['routine','todo','skills'].forEach(t =>
+    document.getElementById('modal-'+t).style.display = t===type?'block':'none'
+  );
+  if (type==='todo') renderCatPills();
+  if (type==='routine') {
+    document.querySelectorAll('#r-days label').forEach(l => {
+      l.onclick = () => l.classList.toggle('checked');
+    });
+  }
+}
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+  // Clear form fields
+  ['r-name','t-name','t-date','t-time','t-notes','s-name','s-icon','s-focus','s-milestone','new-cat-name']
+    .forEach(id => { const el=document.getElementById(id); if(el) el.value=''; });
+  document.querySelectorAll('.days-picker label').forEach(l=>l.classList.remove('checked'));
+  document.getElementById('r-repeat').value = 'daily';
+  document.getElementById('r-days-field').style.display = 'none';
+  document.getElementById('new-cat-field').style.display = 'none';
+  selectedCat = null;
+}
+function bgClose(e) { if (e.target===document.getElementById('modal-bg')) closeModal(); }
+function toggleDayPicker() {
+  document.getElementById('r-days-field').style.display =
+    document.getElementById('r-repeat').value==='weekdays' ? 'block' : 'none';
+}
+
+function renderCatPills() {
+  const wrap = document.getElementById('cat-pills');
+  wrap.innerHTML = '';
+  categories.forEach(c => {
+    const el = document.createElement('button');
+    el.className = 'cat-pill'+(selectedCat===c.id?' sel':'');
+    el.textContent = c.name;
+    el.onclick = () => {
+      selectedCat = selectedCat===c.id ? null : c.id;
+      document.getElementById('new-cat-field').style.display='none';
+      renderCatPills();
+    };
+    wrap.appendChild(el);
+  });
+  const newEl = document.createElement('button');
+  newEl.className = 'cat-pill new-pill';
+  newEl.textContent = '+ New';
+  newEl.onclick = () => document.getElementById('new-cat-field').style.display='block';
+  wrap.appendChild(newEl);
+}
+
+function saveRoutine() {
+  const name = document.getElementById('r-name').value.trim();
+  if (!name) return;
+  const repeat = document.getElementById('r-repeat').value;
+  const days   = repeat==='weekdays'
+    ? [...document.querySelectorAll('#r-days label.checked')].map(l=>l.querySelector('input').value)
+    : [];
+  const r = { id:uid6(), name, time:document.getElementById('r-time').value, repeat, days };
+  routines.push(r); saveRoutinesDB();
+  renderDayChips(); renderRoutines(); closeModal();
+}
+
+function saveTodo() {
+  const name = document.getElementById('t-name').value.trim();
+  if (!name) return;
+  // Handle new category
+  const newCatName = document.getElementById('new-cat-name').value.trim();
+  if (newCatName && !selectedCat) {
+    const c = { id:uid6(), name:newCatName };
+    categories.push(c); saveCategoriesDB();
+    selectedCat = c.id;
+  }
+  const t = { id:uid6(), name, date:document.getElementById('t-date').value, time:document.getElementById('t-time').value, notes:document.getElementById('t-notes').value.trim(), catId:selectedCat||null, done:false, createdAt:Date.now() };
+  todos.push(t); saveTodosDB();
+  renderCatChips(); renderTodos(); closeModal();
+  if (t.date && t.time) scheduleReminder(t);
+}
+
+function saveSkill() {
+  const name = document.getElementById('s-name').value.trim();
+  if (!name) return;
+  const s = { id:uid6(), name, icon:document.getElementById('s-icon').value.trim()||'📚', status:document.getElementById('s-status').value, focus:document.getElementById('s-focus').value.trim(), milestone:document.getElementById('s-milestone').value.trim() };
+  skills.push(s); saveSkillsDB();
+  renderSkills(); closeModal();
+}
+
+// ══════════════════════════════════════════
+// REMINDERS
+// ══════════════════════════════════════════
+function scheduleReminder(t) {
+  if (!('Notification' in window)) return;
+  if (Notification.permission==='default') { Notification.requestPermission(); return; }
+  if (Notification.permission!=='granted') return;
+  const dt   = new Date(t.date+'T'+t.time).getTime();
+  const diff = dt - Date.now();
+  if (diff>0 && diff<7*24*60*60*1000) {
+    setTimeout(()=>new Notification('MyLife', { body:t.name, icon:'icon-192.png' }), diff);
+  }
+}
+
+// ══════════════════════════════════════════
+// GOOGLE AUTH  (same pattern as TradeLog)
+// ══════════════════════════════════════════
+const provider = new GoogleAuthProvider();
+
+window.handleGoogleAuth = async function() {
+  const user = auth.currentUser;
+  if (user && !user.isAnonymous) {
+    alert('Signed in as ' + user.email);
+    return;
+  }
+  try {
+    if (user && user.isAnonymous) {
+      await linkWithPopup(user, provider);
+    } else {
+      await signInWithPopup(auth, provider);
+    }
+  } catch(e) {
+    if (e.code==='auth/credential-already-in-use' || e.code==='auth/email-already-in-use') {
+      try { await signInWithPopup(auth, provider); }
+      catch(e2) { if (e2.code!=='auth/popup-closed-by-user') alert('Sign in failed: '+e2.message); }
+    } else if (e.code!=='auth/popup-closed-by-user') {
+      alert('Sign in failed: '+e.message);
+    }
+  }
+};
+
+window.handleSignOut = async function() {
+  if (!confirm('Sign out?')) return;
+  await signOut(auth);
+};
+
+function updateProfileUI(user) {
+  const nameEl   = document.getElementById('profile-name');
+  const emailEl  = document.getElementById('profile-email');
+  const avatarEl = document.getElementById('profile-avatar');
+  const googleBtn = document.getElementById('google-btn');
+  const googleText = document.getElementById('google-btn-text');
+  const signoutBtn = document.getElementById('signout-btn');
+
+  if (user && !user.isAnonymous) {
+    nameEl.textContent  = user.displayName || 'Google User';
+    emailEl.textContent = user.email;
+    if (user.photoURL) {
+      avatarEl.innerHTML = `<img src="${user.photoURL}" style="width:44px;height:44px;border-radius:50%;object-fit:cover" alt="avatar"/>`;
+    } else {
+      avatarEl.textContent = '😊';
+    }
+    googleText.textContent = user.displayName ? user.displayName.split(' ')[0] : 'Signed in';
+    googleBtn.classList.add('signed-in');
+    signoutBtn.style.display = 'block';
+  } else {
+    nameEl.textContent  = 'Guest';
+    emailEl.textContent = 'Signed in anonymously — data saved locally';
+    avatarEl.textContent = '👤';
+    googleText.textContent = 'Sign in with Google';
+    googleBtn.classList.remove('signed-in');
+    signoutBtn.style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════
+// FIREBASE AUTH + REALTIME SYNC
+// ══════════════════════════════════════════
+onAuthStateChanged(auth, user => {
+  if (user) {
+    uid = user.uid;
+    updateProfileUI(user);
+    setSyncStatus('Syncing…', 'var(--accent)');
+
+    onValue(ref(db, uid+'/routines'), snap => {
+      routines = snap.val() ? Object.values(snap.val()) : [];
+      renderDayChips(); renderRoutines();
+    });
+    onValue(ref(db, uid+'/todos'), snap => {
+      todos = snap.val() ? Object.values(snap.val()) : [];
+      renderCatChips(); renderTodos();
+    });
+    onValue(ref(db, uid+'/skills'), snap => {
+      skills = snap.val() ? Object.values(snap.val()) : [];
+      renderSkills(); renderMilestonePrompts();
+    });
+    onValue(ref(db, uid+'/categories'), snap => {
+      categories = snap.val() ? Object.values(snap.val()) : [];
+      renderCatChips(); renderTodos();
+    });
+    onValue(ref(db, uid+'/routineLog'), snap => {
+      routineLog = snap.val() || {};
+      renderRoutines();
+      setSyncStatus('Synced ✓', 'var(--green)');
+      setTimeout(()=>setSyncStatus('',''), 2000);
+    });
+
+  } else {
+    updateProfileUI(null);
+    setSyncStatus('Connecting…', 'var(--muted)');
+    signInAnonymously(auth).catch(() => {
+      setSyncStatus('Offline', 'var(--yellow)');
+    });
+  }
+});
+
+scheduleAutoSkip();
+
+// ══════════════════════════════════════════
+// EXPOSE TO GLOBAL (required for type="module")
+// ══════════════════════════════════════════
+window.goTo             = goTo;
+window.openModal        = openModal;
+window.closeModal       = closeModal;
+window.bgClose          = bgClose;
+window.toggleDayPicker  = toggleDayPicker;
+window.toggleHistory    = toggleHistory;
+window.changeMonth      = changeMonth;
+window.setRoutineStatus = setRoutineStatus;
+window.deleteRoutine    = deleteRoutine;
+window.setTodoFilter    = setTodoFilter;
+window.toggleTodo       = toggleTodo;
+window.deleteTodo       = deleteTodo;
+window.saveRoutine      = saveRoutine;
+window.saveTodo         = saveTodo;
+window.saveSkill        = saveSkill;
+window.markFocusDone    = markFocusDone;
+window.deleteSkill      = deleteSkill;
+window.saveMilestone    = saveMilestone;
+window.cancelMilestone  = cancelMilestone;
+window.skipMilestone    = skipMilestone;
+
+// ── PWA Install ──
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt=e;
+  document.getElementById('install-banner').classList.add('show');
+});
+document.getElementById('install-btn').addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt=null;
+  document.getElementById('install-banner').classList.remove('show');
+});
+document.getElementById('dismiss-install').addEventListener('click', () => {
+  document.getElementById('install-banner').classList.remove('show');
+});
+
+// ── Service Worker ──
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js'); }
+
+</script>
+</body>
+</html>
